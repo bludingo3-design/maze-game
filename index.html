@@ -1,0 +1,160 @@
+<div id="mazegame" style="width:420px;margin:auto;font-family:Arial;color:#eee;">
+
+<h2 style="text-align:center;">Лабиринт: Найди клад и выход</h2>
+
+<div style="margin-bottom:10px;">
+Игрок: <span id="playerPos">1,1</span><br>
+Клад найден: <span id="treasureStatus">Нет</span><br>
+Ходов: <span id="steps">0</span>
+</div>
+
+<div id="grid" style="
+display:grid;
+grid-template-columns:repeat(5,80px);
+grid-gap:2px;
+margin-bottom:15px;
+">
+</div>
+
+<div id="message" style="
+padding:10px;
+background:#333;
+min-height:40px;
+">
+Найди клад, затем доберись до выхода.
+</div>
+
+<div style="margin-top:10px;text-align:center;">
+<button onclick="move(0,-1)">↑</button><br><br>
+
+<button onclick="move(-1,0)">←</button>
+<button onclick="move(1,0)">→</button><br><br>
+
+<button onclick="move(0,1)">↓</button>
+</div>
+
+</div>
+
+<script>
+
+var size = 5;
+
+var playerX = 0;
+var playerY = 0;
+
+var treasureX = Math.floor(Math.random()*5);
+var treasureY = Math.floor(Math.random()*5);
+
+var exitX = Math.floor(Math.random()*5);
+var exitY = Math.floor(Math.random()*5);
+
+while(exitX == treasureX && exitY == treasureY)
+{
+exitX = Math.floor(Math.random()*5);
+exitY = Math.floor(Math.random()*5);
+}
+
+var hasTreasure = false;
+var steps = 0;
+
+function drawGrid()
+{
+var grid = document.getElementById("grid");
+
+grid.innerHTML = "";
+
+for(var y=0;y<size;y++)
+{
+for(var x=0;x<size;x++)
+{
+
+var cell = document.createElement("div");
+
+cell.style.width = "80px";
+cell.style.height = "80px";
+cell.style.border = "1px solid #666";
+cell.style.background = "#222";
+cell.style.display = "flex";
+cell.style.alignItems = "center";
+cell.style.justifyContent = "center";
+cell.style.fontSize = "30px";
+
+if(x == playerX && y == playerY)
+{
+cell.innerHTML = "😀";
+}
+
+grid.appendChild(cell);
+
+}
+}
+
+document.getElementById("playerPos").innerHTML =
+(playerX+1) + "," + (playerY+1);
+
+document.getElementById("steps").innerHTML = steps;
+
+document.getElementById("treasureStatus").innerHTML =
+hasTreasure ? "Да" : "Нет";
+}
+
+function move(dx,dy)
+{
+
+var newX = playerX + dx;
+var newY = playerY + dy;
+
+if(newX < 0 || newY < 0 || newX >= size || newY >= size)
+{
+return;
+}
+
+playerX = newX;
+playerY = newY;
+
+steps++;
+
+if(playerX == treasureX &&
+playerY == treasureY &&
+!hasTreasure)
+{
+hasTreasure = true;
+
+document.getElementById("message").innerHTML =
+"Ты нашёл клад! Теперь найди выход.";
+}
+
+if(playerX == exitX &&
+playerY == exitY)
+{
+
+if(hasTreasure)
+{
+document.getElementById("message").innerHTML =
+"Победа! Ты нашёл клад и выбрался за " + steps + " ходов.";
+
+disableGame();
+}
+else
+{
+document.getElementById("message").innerHTML =
+"Это выход, но сначала нужен клад.";
+}
+}
+
+drawGrid();
+}
+
+function disableGame()
+{
+var buttons = document.getElementsByTagName("button");
+
+for(var i=0;i<buttons.length;i++)
+{
+buttons[i].disabled = true;
+}
+}
+
+drawGrid();
+
+</script>
