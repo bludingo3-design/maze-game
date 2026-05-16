@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maze Game</title>
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #ececec;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#game {
+    background: white;
+    border: 2px solid #444;
+    padding: 15px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 520px;
+}
+
+h1 {
+    text-align: center;
+    margin-top: 0;
+}
+
+#info {
+    margin-bottom: 10px;
+    line-height: 1.7;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    margin-bottom: 15px;
+}
+
+.cell {
+    aspect-ratio: 1/1;
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px;
+    background: #f8f8f8;
+    position: relative;
+}
+
+.fog {
+    background: #dcdcdc;
+}
+
+.visited {
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #9bd18b,
+            #9bd18b 10px,
+            #8bc97b 10px,
+            #8bc97b 20px
+        );
+}
+
+.wall {
+    background: #555 !important;
+}
+
+.controls {
+    text-align: center;
+}
+
+.controls button {
+    margin: 3px;
+    width: 60px;
+    height: 45px;
+    font-size: 18px;
+}
+
+#message {
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    min-height: 40px;
+    margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+    <h1>Лабиринт</h1>
+
+    <div id="info"></div>
+    <div id="message">Найди клад, а затем выход.</div>
+
+    <div id="grid"></div>
+
+    <div class="controls">
+        <button onclick="move(0,-1)">↑</button><br>
+        <button onclick="move(-1,0)">←</button>
+        <button onclick="move(1,0)">→</button><br>
+        <button onclick="move(0,1)">↓</button>
+    </div>
+
+    <div class="controls" style="margin-top:10px;">
+        <button onclick="throwGrenade('up')">💣↑</button>
+        <button onclick="throwGrenade('left')">💣←</button>
+        <button onclick="throwGrenade('right')">💣→</button>
+        <button onclick="throwGrenade('down')">💣↓</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 5;
+
+const player = {
+    x: 0,
+    y: 0,
+    grenades: 3,
+    hasTreasure: false,
+    steps: 0
+};
+
+const treasure = randomCell();
+let exitCell = randomCell();
+let arsenal = randomCell();
+
+while(sameCell(exitCell, treasure)) {
+    exitCell = randomCell();
+}
+
+while(sameCell(arsenal, treasure) || sameCell(arsenal, exitCell)) {
+    arsenal = randomCell();
+}
+
+const pits = [randomCell(), randomCell(), randomCell()];
+
+const visited = [];
+const revealedWalls = [];
+
+for(let y=0;y<SIZE;y++) {
+    visited[y] = [];
+    revealedWalls[y] = [];
+
+    for(let x=0;x<SIZE;x++) {
+        visited[y][x] = false;
+        revealedWalls[y][x] = false;
+    }
+}
+
+const walls = [
+    [{x:1,y:1},{x:2,y:1},{x:3,y:1}],
+    [{x:2,y:3},{x:3,y:3},{x:4,y:3}],
+    [{x:0,y:4}],
+    [{x:4,y:0}],
+    [{x:1,y:3}]
+];
+
+function randomCell() {
+    return {
+        x: Math.floor(Math.random()*SIZE),
+        y: Math.floor(Math.random()*SIZE)
+    };
+}
+
+function sameCell(a,b) {
+    return a.x === b.x && a.y === b.y;
+}
+
+function isWall(x,y) {
+    for(const group of walls) {
+        for(const wall of group) {
+            if(wall.x === x && wall.y === y) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function revealWall(x,y) {
+    if(x >=0 && y >=0 && x < SIZE && y < SIZE) {
+        revealedWalls[y][x] = true;
+    }
+}
+
+function draw() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    visited[player.y][player.x] = true;
+
+    for(let y=0;y<SIZE;y++) {
+        for(let x=0;x<SIZE;x++) {
+
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+
+            if(!visited[y][x]) {
+                cell.classList.add('fog');
+            } else {
+                cell.classList.add('visited');
+            }
+
+            if(revealedWalls[y][x]) {
+                cell.classList.add('wall');
+            }
+
+            if(player.x === x && player.y === y) {
+                cell.innerHTML = '🔵';
+            }
+
+            if(visited[y][x]) {
+
+                if(player.hasTreasure && treasure.x === x && treasure.y === y) {
+                    cell.innerHTML = '💰';
+                }
+
+                if(exitCell.x === x && exitCell.y === y) {
+                    cell.innerHTML = '🚪';
+                }
+
+                if(arsenal.x === x && arsenal.y === y) {
+                    cell.innerHTML = '🧨';
+                }
+            }
+
+            if(player.x === x && player.y === y) {
+                cell.innerHTML = '🔵';
+            }
+
+            grid.appendChild(cell);
+        }
+    }
+
+    document.getElementById('info').innerHTML = `
+        Ходы: ${player.steps}<br>
+        Гранаты: ${player.grenades}<br>
+        Клад: ${player.hasTreasure ? 'Да' : 'Нет'}
+    `;
+}
+
+function move(dx,dy) {
+
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+
+    if(nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) {
+        return;
+    }
+
+    if(isWall(nx,ny)) {
+        revealWall(nx,ny);
+        setMessage('Ты упёрся в стену.');
+        draw();
+        return;
+    }
+
+    player.x = nx;
+    player.y = ny;
+    player.steps++;
+
+    checkSpecials();
+
+    draw();
+}
+
+function checkSpecials() {
+
+    if(!player.hasTreasure && sameCell(player, treasure)) {
+        player.hasTreasure = true;
+        setMessage('Ты нашёл клад!');
+    }
+
+    if(sameCell(player, arsenal)) {
+        player.grenades += 3;
+        setMessage('Арсенал найден. +3 гранаты.');
+
+        arsenal.x = -1;
+        arsenal.y = -1;
+    }
+
+    for(let i=0;i<pits.length;i++) {
+
+        if(sameCell(player, pits[i])) {
+
+            const next = pits[(i+1)%pits.length];
+
+            player.x = next.x;
+            player.y = next.y;
+
+            setMessage('Ты провалился в яму!');
+        }
+    }
+
+    if(sameCell(player, exitCell)) {
+
+        if(player.hasTreasure) {
+            setMessage('Победа! Ты выбрался за ' + player.steps + ' ходов.');
+            saveRecord();
+        }
+        else {
+            setMessage('Это выход. Но клад ещё не найден.');
+        }
+    }
+}
+
+function throwGrenade(dir) {
+
+    if(player.grenades <= 0) {
+        setMessage('Гранат больше нет.');
+        return;
+    }
+
+    let tx = player.x;
+    let ty = player.y;
+
+    if(dir === 'up') ty--;
+    if(dir === 'down') ty++;
+    if(dir === 'left') tx--;
+    if(dir === 'right') tx++;
+
+    if(tx < 0 || ty < 0 || tx >= SIZE || ty >= SIZE) {
+        return;
+    }
+
+    let removed = false;
+
+    for(const group of walls) {
+        for(let i=group.length-1;i>=0;i--) {
+
+            if(group[i].x === tx && group[i].y === ty) {
+                group.splice(i,1);
+                removed = true;
+            }
+        }
+    }
+
+    player.grenades--;
+
+    if(removed) {
+        revealedWalls[ty][tx] = false;
+        setMessage('Стена взорвана.');
+    }
+    else {
+        setMessage('Граната взорвалась впустую.');
+    }
+
+    draw();
+}
+
+function setMessage(text) {
+    document.getElementById('message').innerText = text;
+}
+
+function saveRecord() {
+
+    const best = localStorage.getItem('mazeRecord');
+
+    if(best === null || player.steps < Number(best)) {
+        localStorage.setItem('mazeRecord', player.steps);
+        setMessage('Новый рекорд: ' + player.steps + ' ходов!');
+    }
+}
+
+window.addEventListener('keydown', function(e) {
+
+    if(e.key === 'ArrowUp') move(0,-1);
+    if(e.key === 'ArrowDown') move(0,1);
+    if(e.key === 'ArrowLeft') move(-1,0);
+    if(e.key === 'ArrowRight') move(1,0);
+});
+
+draw();
+</script>
+
+</body>
+</html>
